@@ -1,22 +1,29 @@
 {
   "expo": {
-    "name": "UtangFreeApp",
-    "slug": "UtangFreeApp",
+    "name": "Utang Free",
+    "slug": "utang-free-app",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "utangfreeapp",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
+    "description": "A mobile app to help Filipino users manage and track their debt payments",
+    "primaryColor": "#10B981",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.utangfree.app",
+      "buildNumber": "1"
     },
     "android": {
+      "package": "com.utangfree.app",
+      "versionCode": 1,
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#10B981"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "permissions": []
     },
     "web": {
       "bundler": "metro",
@@ -31,12 +38,17 @@
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 200,
           "resizeMode": "contain",
-          "backgroundColor": "#ffffff"
+          "backgroundColor": "#10B981"
         }
       ]
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": "your-project-id-here"
+      }
     }
   }
 }
