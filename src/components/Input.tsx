@@ -1,6 +1,6 @@
 import React from 'react';
-import { View, Text, TextInput, StyleSheet } from 'react-native';
-import { Colors, Typography, Spacing } from '../constants';
+import { StyleSheet, Text, TextInput, View } from 'react-native';
+import { Colors, Spacing, Typography } from '../constants';
 import { InputProps } from '../types';
 
 export const Input: React.FC<InputProps> = ({
@@ -13,6 +13,7 @@ export const Input: React.FC<InputProps> = ({
   keyboardType = 'default',
   width = 'full',
   prefix,
+  suffix,
 }) => {
   return (
     <View style={[styles.container, width === 'half' && styles.halfWidth]}>
@@ -27,6 +28,7 @@ export const Input: React.FC<InputProps> = ({
           keyboardType={keyboardType}
           placeholderTextColor={Colors.textTertiary}
         />
+        {suffix && <Text style={styles.suffix}>{suffix}</Text>}
       </View>
       {helperText && <Text style={styles.helperText}>{helperText}</Text>}
       {error && <Text style={styles.errorText}>{error}</Text>}
@@ -63,6 +65,11 @@ const styles = StyleSheet.create({
     ...Typography.bodyLarge,
     color: Colors.textSecondary,
     marginRight: Spacing.xs,
+  },
+  suffix: {
+    ...Typography.bodyLarge,
+    color: Colors.textSecondary,
+    marginLeft: Spacing.xs,
   },
   input: {
     flex: 1,
