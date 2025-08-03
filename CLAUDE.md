@@ -51,6 +51,7 @@ src/
 2. **Calculation Layer**: `CalculationUtils` processes utang data for KPIs
 3. **State Management**: Local component state with AsyncStorage persistence
 4. **Navigation**: Expo Router stack navigation with shared app state
+5. **Real-time Updates**: Dashboard automatically refreshes when returning from other screens using `useFocusEffect`
 
 ## Core Data Models
 
@@ -108,9 +109,14 @@ const overdueUtangs = CalculationUtils.getOverdueUtangs(utangs);
 ### Navigation Flow
 1. `index.tsx` - Route determination (first-time vs returning user)
 2. `add-utang.tsx` - Utang creation with type selection (loan/credit card) 
-3. `dashboard.tsx` - KPI visualization and navigation hub
+3. `dashboard.tsx` - KPI visualization and navigation hub with auto-refresh on focus
 4. `view-utang-list.tsx` - Utang management with selection and payment marking
 5. `congratulations.tsx` - Payment success celebration
+6. `profile.tsx` - User profile management with immediate dashboard updates
+
+**Navigation Configuration**:
+- **Swipe Gestures**: Left-edge swipe-to-go-back is **disabled** via `gestureEnabled: false` in Stack navigator
+- **Auto-refresh**: Dashboard reloads data when screen gains focus (returning from profile, etc.)
 
 ## Development Guidelines
 
@@ -133,6 +139,34 @@ const overdueUtangs = CalculationUtils.getOverdueUtangs(utangs);
 - Test on both iOS and Android platforms
 - Validate AsyncStorage operations work correctly
 
+## Recent Updates & Improvements
+
+### Navigation Enhancements
+- **Disabled Swipe Gesture**: Left-edge swipe-to-go-back is disabled across all screens in `app/_layout.tsx` using `gestureEnabled: false`
+- **Controlled Navigation**: Users must use app navigation buttons for predictable UX
+
+### Dashboard Real-time Updates  
+- **Auto-refresh on Focus**: Dashboard automatically reloads data when screen gains focus using `useFocusEffect`
+- **Profile Integration**: Changes made in profile settings are immediately reflected on dashboard
+- **No App Restart Required**: KPI calculations, user greetings, and debt-to-income ratios update instantly
+
+### Implementation Details
+```typescript
+// Dashboard auto-refresh pattern in app/dashboard.tsx
+useFocusEffect(
+  useCallback(() => {
+    loadData(); // Reloads profile, utangs, and KPIs
+  }, [])
+);
+
+// Navigation configuration in app/_layout.tsx  
+<Stack screenOptions={{
+  gestureEnabled: false, // Disables swipe-to-go-back
+  headerShown: false,
+  contentStyle: { backgroundColor: '#F9FAFB' },
+}} />
+```
+
 ## Important Notes
 
 - **Data Privacy**: All data stored locally, no external API calls
@@ -140,3 +174,7 @@ const overdueUtangs = CalculationUtils.getOverdueUtangs(utangs);
 - **Date Handling**: Uses `DateUtils` for consistent date operations
 - **Dual Type Support**: Handles both loan amortization and credit card debt
 - **First-Time Experience**: Special onboarding flow for new users
+- **User Experience**: 
+  - Swipe-to-go-back gesture disabled for controlled navigation
+  - Dashboard auto-refreshes profile data when returning from settings
+  - Real-time KPI updates without app restart
