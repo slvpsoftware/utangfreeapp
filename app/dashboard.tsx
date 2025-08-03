@@ -16,6 +16,7 @@ export default function DashboardPage() {
     projectedFreeDate: 'Calculating...',
     debtToIncomeRatio: undefined as number | undefined,
   });
+  const [encryptionStatus, setEncryptionStatus] = useState<any>(null);
 
   useEffect(() => {
     loadData();
@@ -36,6 +37,10 @@ export default function DashboardPage() {
         projectedFreeDate: kpiData.projectedFreeDate,
         debtToIncomeRatio: kpiData.debtToIncomeRatio,
       });
+
+      // Load encryption status
+      const encStatus = await StorageUtils.getEncryptionInfo();
+      setEncryptionStatus(encStatus);
     } catch (error) {
       console.error('Error loading dashboard data:', error);
     }
@@ -55,6 +60,18 @@ export default function DashboardPage() {
 
   const handleCreditCardsPress = () => {
     router.push('/credit-cards');
+  };
+
+  const handleClearAllData = async () => {
+    try {
+      await StorageUtils.clearAllData();
+      alert('All data cleared successfully!');
+      // Reload dashboard to show empty state
+      loadData();
+    } catch (error) {
+      console.error('Error clearing data:', error);
+      alert('Error clearing data. Please try again.');
+    }
   };
 
   // Helper function to determine debt-to-income ratio color
@@ -107,6 +124,19 @@ export default function DashboardPage() {
         </View>
       )}
 
+      {/* Encryption Status */}
+      {encryptionStatus && (
+        <View style={styles.encryptionStatus}>
+          <Text style={styles.encryptionTitle}>🔒 Security Status</Text>
+          <Text style={styles.encryptionText}>
+            {encryptionStatus.hardwareSecurityLevel}
+          </Text>
+          <Text style={styles.encryptionText}>
+            Active Keys: {encryptionStatus.keyTypes?.length || 0}
+          </Text>
+        </View>
+      )}
+
       {/* Action Buttons */}
       <View style={styles.buttonContainer}>
         <Button
@@ -132,6 +162,13 @@ export default function DashboardPage() {
         <Button
           title={userProfile ? "Edit Profile" : "Set Up Profile"}
           onPress={handleProfilePress}
+          variant="secondary"
+          fullWidth
+        />
+        
+        <Button
+          title="⚠️ Clear All Data"
+          onPress={handleClearAllData}
           variant="secondary"
           fullWidth
         />
@@ -186,5 +223,24 @@ const styles = StyleSheet.create({
     ...Typography.bodySmall,
     color: Colors.textSecondary,
     lineHeight: 18,
+  },
+  encryptionStatus: {
+    backgroundColor: Colors.success + '20',
+    padding: Spacing.md,
+    borderRadius: 12,
+    marginBottom: Spacing.md,
+    borderWidth: 1,
+    borderColor: Colors.success + '40',
+  },
+  encryptionTitle: {
+    ...Typography.bodyMedium,
+    fontWeight: '600',
+    color: Colors.success,
+    marginBottom: Spacing.xs,
+  },
+  encryptionText: {
+    ...Typography.bodySmall,
+    color: Colors.success,
+    lineHeight: 16,
   },
 }); 
