@@ -1,5 +1,3 @@
-import { Float } from "react-native/Libraries/Types/CodegenTypes";
-
 export interface Utang {
   id: string;
   label: string;
@@ -7,7 +5,7 @@ export interface Utang {
   amount: number; // For loan: amortization per month, For credit card: total amount due
   dueDay: number; // 1-31
   finalPaymentDate?: string; // ISO string - required for loan, calculated for credit card
-  interestRate?: Float; // e.g. 0.05 for 5% - required for credit card
+  interestRate?: number; // e.g. 0.05 for 5% - required for credit card
   monthlyPayment?: number; // For credit card: how much user plans to pay monthly
   status: 'pending' | 'paid' | 'overdue';
   createdAt: string;
