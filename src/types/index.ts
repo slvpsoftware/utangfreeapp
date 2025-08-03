@@ -3,7 +3,7 @@ export interface Utang {
   label: string;
   type: 'loan' | 'credit_card';
   amount: number; // For loan: amortization per month, For credit card: total amount due
-  dueDay: number; // 1-31
+  dueDate: string; // ISO string - specific due date for this payment (e.g., "2024-01-15")
   finalPaymentDate?: string; // ISO string - required for loan, calculated for credit card
   interestRate?: number; // e.g. 0.05 for 5% - required for credit card
   monthlyPayment?: number; // For credit card: how much user plans to pay monthly
@@ -12,16 +12,37 @@ export interface Utang {
   paidAt?: string;
 }
 
+export interface UserProfile {
+  name: string;
+  income?: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PaymentHistory {
+  id: string;
+  utangId: string;
+  utangLabel: string;
+  utangType: 'loan' | 'credit_card';
+  amountPaid: number;
+  paymentDate: string;
+  notes?: string;
+  createdAt: string;
+}
+
 export interface AppState {
   utangs: Utang[];
   isFirstTime: boolean;
   lastCalculated: string;
+  userProfile?: UserProfile;
+  paymentHistory: PaymentHistory[];
 }
 
 export interface KPIData {
   totalUtang: number;
   utangImprovement: number;
   projectedFreeDate: string;
+  debtToIncomeRatio?: number; // Percentage (e.g., 25 for 25%)
 }
 
 export interface NavigationProps {

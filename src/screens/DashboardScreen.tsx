@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
-import { NavigationProps } from '../types';
+import { NavigationProps, UserProfile } from '../types';
 import { Colors, Typography, Spacing } from '../constants';
 import { StorageUtils, CalculationUtils, DateUtils } from '../utils';
 import { Button } from '../components/Button';
@@ -8,6 +8,7 @@ import { KPICard } from '../components/KPICard';
 
 export const DashboardScreen: React.FC<NavigationProps> = ({ navigation }) => {
   const [utangs, setUtangs] = useState<any[]>([]);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [kpis, setKpis] = useState({
     totalUtang: 0,
     utangImprovement: 0,
@@ -22,6 +23,9 @@ export const DashboardScreen: React.FC<NavigationProps> = ({ navigation }) => {
     try {
       const allUtangs = await StorageUtils.getAllUtangs();
       setUtangs(allUtangs);
+      
+      const profile = await StorageUtils.getUserProfile();
+      setUserProfile(profile);
       
       const kpiData = CalculationUtils.calculateKPIs(allUtangs);
       setKpis({
@@ -38,10 +42,16 @@ export const DashboardScreen: React.FC<NavigationProps> = ({ navigation }) => {
     navigation.navigate('ViewUtangList');
   };
 
+  const handleProfilePress = () => {
+    navigation.navigate('Profile');
+  };
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       {/* Header */}
-      <Text style={styles.header}>Dashboard</Text>
+      <Text style={styles.header}>
+        {userProfile ? `Hello, ${userProfile.name}!` : 'Dashboard'}
+      </Text>
 
       {/* KPI Cards */}
       <KPICard
@@ -62,13 +72,21 @@ export const DashboardScreen: React.FC<NavigationProps> = ({ navigation }) => {
         color={kpis.projectedFreeDate === 'Debt Free!' ? Colors.success : Colors.textPrimary}
       />
 
-      {/* Action Button */}
+      {/* Action Buttons */}
       <View style={styles.buttonContainer}>
         <Button
           title="View Utang List"
           onPress={handleViewUtangList}
           fullWidth
         />
+        
+        <Button
+          title={userProfile ? "Edit Profile" : "Set Up Profile"}
+          onPress={handleProfilePress}
+          variant="secondary"
+          fullWidth
+        />
+        
         <Text style={styles.helperText}>More features coming soon</Text>
       </View>
     </ScrollView>
@@ -93,6 +111,7 @@ const styles = StyleSheet.create({
   buttonContainer: {
     marginTop: Spacing.xl,
     alignItems: 'center',
+    gap: Spacing.md,
   },
   helperText: {
     ...Typography.bodySmall,

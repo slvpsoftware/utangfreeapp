@@ -16,8 +16,10 @@ export const DateUtils = {
   // Check if utang is overdue
   isOverdue(utang: Utang): boolean {
     const today = new Date();
-    const currentDay = today.getDate();
-    return utang.dueDay < currentDay && utang.status === 'pending';
+    today.setHours(0, 0, 0, 0);
+    const dueDate = new Date(utang.dueDate);
+    dueDate.setHours(0, 0, 0, 0);
+    return dueDate < today && utang.status === 'pending';
   },
 
   // Format currency
@@ -48,19 +50,12 @@ export const DateUtils = {
     });
   },
 
-  // Get days until due
-  getDaysUntilDue(dueDay: number): number {
+  // Get days until due (using actual due date)
+  getDaysUntilDue(utang: Utang): number {
     const today = new Date();
-    const currentDay = today.getDate();
-    const currentMonth = today.getMonth();
-    const currentYear = today.getFullYear();
-    
-    let dueDate = new Date(currentYear, currentMonth, dueDay);
-    
-    // If due day has passed this month, calculate for next month
-    if (dueDay < currentDay) {
-      dueDate = new Date(currentYear, currentMonth + 1, dueDay);
-    }
+    today.setHours(0, 0, 0, 0);
+    const dueDate = new Date(utang.dueDate);
+    dueDate.setHours(0, 0, 0, 0);
     
     const diffTime = dueDate.getTime() - today.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));

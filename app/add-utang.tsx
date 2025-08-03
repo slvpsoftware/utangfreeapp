@@ -4,14 +4,16 @@ import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Button } from '../src/components/Button';
 import { Chip } from '../src/components/Chip';
 import { Input } from '../src/components/Input';
+import { DatePicker } from '../src/components/DatePicker';
 import { Colors, Spacing, Typography } from '../src/constants';
 import { CalculationUtils, DateUtils, StorageUtils } from '../src/utils';
 
 export default function AddUtangPage() {
   const [utangType, setUtangType] = useState<'loan' | 'credit_card' | null>(null);
   const [utangLabel, setUtangLabel] = useState('');
-  const [dueDay, setDueDay] = useState('');
+  const [dueDay, setDueDay] = useState(''); // Still used for UI input, converted to dates during creation
   const [finalPaymentDate, setFinalPaymentDate] = useState('');
+  const [monthsToPayOff, setMonthsToPayOff] = useState('');
   const [interestRate, setInterestRate] = useState('');
   const [amount, setAmount] = useState('');
   const [monthlyPayment, setMonthlyPayment] = useState('');
@@ -23,6 +25,23 @@ export default function AddUtangPage() {
 
   const handleBack = () => {
     router.back();
+  };
+
+  // Calculate final payment date from months
+  const calculateFinalDateFromMonths = (months: number): string => {
+    const finalDate = new Date();
+    finalDate.setMonth(finalDate.getMonth() + months);
+    return finalDate.toISOString().split('T')[0];
+  };
+
+  // Handle months input and update final payment date
+  const handleMonthsChange = (months: string) => {
+    setMonthsToPayOff(months);
+    const monthsNum = parseInt(months);
+    if (!isNaN(monthsNum) && monthsNum > 0) {
+      const calculatedDate = calculateFinalDateFromMonths(monthsNum);
+      setFinalPaymentDate(calculatedDate);
+    }
   };
 
   const validateForm = () => {
@@ -42,8 +61,15 @@ export default function AddUtangPage() {
     }
 
     if (utangType === 'loan') {
-      if (!DateUtils.isValidFinalDate(finalPaymentDate)) {
+      if (!finalPaymentDate && !monthsToPayOff) {
+        newErrors.finalDate = 'Please set final payment date or number of months';
+      } else if (finalPaymentDate && !DateUtils.isValidFinalDate(finalPaymentDate)) {
         newErrors.finalDate = 'Final payment date must be in the future';
+      } else if (monthsToPayOff) {
+        const months = parseInt(monthsToPayOff);
+        if (isNaN(months) || months <= 0 || months > 600) {
+          newErrors.months = 'Months must be between 1-600';
+        }
       }
     }
 
@@ -101,13 +127,18 @@ export default function AddUtangPage() {
 
     try {
       if (utangType === 'loan') {
-        // For loans: create multiple utang records for each month
+        // For loans: create multiple utang records for each month with specific due dates
         const startDate = new Date();
         const endDate = new Date(finalPaymentDate!);
         const utangsToCreate = [];
         
-        let currentDate = new Date(startDate);
-        currentDate.setDate(parseInt(dueDay));
+        // Start from current month, set to the specified due day
+        let currentDate = new Date(startDate.getFullYear(), startDate.getMonth(), parseInt(dueDay));
+        
+        // If the due day for this month has already passed, start from next month
+        if (currentDate < startDate) {
+          currentDate.setMonth(currentDate.getMonth() + 1);
+        }
         
         let monthCounter = 1;
         while (currentDate <= endDate) {
@@ -117,7 +148,7 @@ export default function AddUtangPage() {
             type: 'loan' as const,
             label: `${utangLabel.trim()} - Month ${monthCounter}`,
             amount: parseFloat(amount),
-            dueDay: parseInt(dueDay),
+            dueDate: currentDate.toISOString().split('T')[0], // YYYY-MM-DD format
             finalPaymentDate: finalPaymentDate!,
             status: 'pending' as const,
             createdAt: new Date().toISOString(),
@@ -125,7 +156,7 @@ export default function AddUtangPage() {
           
           utangsToCreate.push(newUtang);
           
-          // Move to next month
+          // Move to next month, same day
           currentDate.setMonth(currentDate.getMonth() + 1);
           monthCounter++;
         }
@@ -135,19 +166,28 @@ export default function AddUtangPage() {
           await StorageUtils.saveUtang(utang);
         }
       } else {
-        // For credit cards: create single utang with calculated final date
+        // For credit cards: create single utang with next due date
         const estimatedFinalDate = calculateEstimatedFinalDate(
           parseFloat(amount),
           parseFloat(monthlyPayment),
           parseFloat(interestRate)
         );
         
+        // Calculate next due date for credit card
+        const currentDate = new Date();
+        const nextDueDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), parseInt(dueDay));
+        
+        // If the due day for this month has already passed, set for next month
+        if (nextDueDate < currentDate) {
+          nextDueDate.setMonth(nextDueDate.getMonth() + 1);
+        }
+        
         const newUtang = {
           id: Date.now().toString(),
           type: 'credit_card' as const,
           label: utangLabel.trim(),
           amount: parseFloat(amount),
-          dueDay: parseInt(dueDay),
+          dueDate: nextDueDate.toISOString().split('T')[0], // YYYY-MM-DD format
           finalPaymentDate: estimatedFinalDate,
           interestRate: parseFloat(interestRate) / 100,
           monthlyPayment: parseFloat(monthlyPayment),
@@ -222,11 +262,10 @@ export default function AddUtangPage() {
           />
 
           {utangType === 'loan' && (
-            <Input
+            <DatePicker
               label="Final Payment Date"
-              placeholder="YYYY-MM-DD"
               value={finalPaymentDate}
-              onChangeText={setFinalPaymentDate}
+              onChange={setFinalPaymentDate}
               helperText="When you plan to finish paying this utang"
               error={errors.finalDate}
               width="half"
@@ -247,6 +286,22 @@ export default function AddUtangPage() {
             />
           )}
         </View>
+
+        {utangType === 'loan' && (
+          <View style={styles.orSection}>
+            <Text style={styles.orText}>or</Text>
+            <Input
+              label="How many months to pay?"
+              placeholder="12"
+              value={monthsToPayOff}
+              onChangeText={handleMonthsChange}
+              helperText="Number of months to pay off this loan"
+              error={errors.months}
+              keyboardType="numeric"
+              width="full"
+            />
+          </View>
+        )}
 
         {utangType === 'credit_card' && (
           <Input
@@ -281,7 +336,7 @@ export default function AddUtangPage() {
           onPress={handleSubmit}
           loading={loading}
           disabled={!utangType || !utangLabel.trim() || !dueDay || !amount || 
-            (utangType === 'loan' && !finalPaymentDate) ||
+            (utangType === 'loan' && !finalPaymentDate && !monthsToPayOff) ||
             (utangType === 'credit_card' && (!interestRate || !monthlyPayment))}
           fullWidth
         />
@@ -327,5 +382,16 @@ const styles = StyleSheet.create({
     ...Typography.bodySmall,
     color: Colors.danger,
     marginTop: Spacing.xs,
+  },
+  orSection: {
+    alignItems: 'center',
+    marginVertical: Spacing.md,
+  },
+  orText: {
+    ...Typography.bodyMedium,
+    color: Colors.textSecondary,
+    backgroundColor: Colors.background,
+    paddingHorizontal: Spacing.sm,
+    marginBottom: Spacing.sm,
   },
 }); 

@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Utang, AppState } from '../types';
+import { Utang, AppState, UserProfile, PaymentHistory } from '../types';
 
 const STORAGE_KEY = 'UTANG_FREE_DATA';
 
@@ -32,7 +32,12 @@ export const StorageUtils = {
 
   // Save utang
   async saveUtang(utang: Utang): Promise<void> {
-    const state = await this.loadAppState() || { utangs: [], isFirstTime: true, lastCalculated: '' };
+    const state = await this.loadAppState() || { 
+      utangs: [], 
+      isFirstTime: true, 
+      lastCalculated: '', 
+      paymentHistory: [] 
+    };
     state.utangs.push(utang);
     state.isFirstTime = false;
     state.lastCalculated = new Date().toISOString();
@@ -57,6 +62,109 @@ export const StorageUtils = {
   async getAllUtangs(): Promise<Utang[]> {
     const state = await this.loadAppState();
     return state?.utangs || [];
+  },
+
+  // Delete utangs
+  async deleteUtangs(utangIds: string[]): Promise<void> {
+    const state = await this.loadAppState();
+    if (!state) return;
+
+    state.utangs = state.utangs.filter(utang => !utangIds.includes(utang.id));
+    state.lastCalculated = new Date().toISOString();
+    await this.saveAppState(state);
+  },
+
+  // Update utang
+  async updateUtang(utangId: string, updates: Partial<Utang>): Promise<void> {
+    const state = await this.loadAppState();
+    if (!state) return;
+
+    const utangIndex = state.utangs.findIndex(utang => utang.id === utangId);
+    if (utangIndex === -1) return;
+
+    state.utangs[utangIndex] = {
+      ...state.utangs[utangIndex],
+      ...updates,
+    };
+    state.lastCalculated = new Date().toISOString();
+    await this.saveAppState(state);
+  },
+
+  // Save user profile
+  async saveUserProfile(profile: UserProfile): Promise<void> {
+    const state = await this.loadAppState() || { 
+      utangs: [], 
+      isFirstTime: true, 
+      lastCalculated: '', 
+      paymentHistory: [] 
+    };
+    state.userProfile = profile;
+    await this.saveAppState(state);
+  },
+
+  // Get user profile
+  async getUserProfile(): Promise<UserProfile | null> {
+    const state = await this.loadAppState();
+    return state?.userProfile || null;
+  },
+
+  // Update user profile
+  async updateUserProfile(updates: Partial<UserProfile>): Promise<void> {
+    const state = await this.loadAppState();
+    if (!state || !state.userProfile) return;
+
+    state.userProfile = {
+      ...state.userProfile,
+      ...updates,
+      updatedAt: new Date().toISOString(),
+    };
+    await this.saveAppState(state);
+  },
+
+  // Save payment record
+  async savePaymentHistory(payment: PaymentHistory): Promise<void> {
+    const state = await this.loadAppState() || { 
+      utangs: [], 
+      isFirstTime: true, 
+      lastCalculated: '', 
+      paymentHistory: [] 
+    };
+    if (!state.paymentHistory) {
+      state.paymentHistory = [];
+    }
+    state.paymentHistory.push(payment);
+    state.lastCalculated = new Date().toISOString();
+    await this.saveAppState(state);
+  },
+
+  // Get all payment history
+  async getAllPaymentHistory(): Promise<PaymentHistory[]> {
+    const state = await this.loadAppState();
+    return state?.paymentHistory || [];
+  },
+
+  // Delete payment record
+  async deletePaymentHistory(paymentId: string): Promise<void> {
+    const state = await this.loadAppState();
+    if (!state || !state.paymentHistory) return;
+
+    state.paymentHistory = state.paymentHistory.filter(payment => payment.id !== paymentId);
+    await this.saveAppState(state);
+  },
+
+  // Update payment record
+  async updatePaymentHistory(paymentId: string, updates: Partial<PaymentHistory>): Promise<void> {
+    const state = await this.loadAppState();
+    if (!state || !state.paymentHistory) return;
+
+    const paymentIndex = state.paymentHistory.findIndex(payment => payment.id === paymentId);
+    if (paymentIndex === -1) return;
+
+    state.paymentHistory[paymentIndex] = {
+      ...state.paymentHistory[paymentIndex],
+      ...updates,
+    };
+    await this.saveAppState(state);
   },
 
   // Clear all data (for testing)
