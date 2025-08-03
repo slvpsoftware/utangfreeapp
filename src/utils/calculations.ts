@@ -1,4 +1,4 @@
-import { Utang, KPIData } from '../types';
+import { KPIData, Utang } from '../types';
 import { DateUtils } from './dateUtils';
 
 export const CalculationUtils = {
@@ -33,6 +33,12 @@ export const CalculationUtils = {
 
   // Validate amount (max 50k limit)
   isValidAmount(amount: number): boolean {
+    return amount > 0 && amount <= 500000;
+  },
+
+  
+  // Validate amount (max 50k limit)
+  isValidAmortization(amount: number): boolean {
     return amount > 0 && amount <= 50000;
   },
 

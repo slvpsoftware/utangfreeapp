@@ -1,9 +1,12 @@
 export interface Utang {
   id: string;
   label: string;
-  amount: number;
+  type: 'loan' | 'credit_card';
+  amount: number; // For loan: amortization per month, For credit card: total amount due
   dueDay: number; // 1-31
-  finalPaymentDate: string; // ISO string
+  finalPaymentDate?: string; // ISO string - required for loan, calculated for credit card
+  interestRate?: number; // e.g. 0.05 for 5% - required for credit card
+  monthlyPayment?: number; // For credit card: how much user plans to pay monthly
   status: 'pending' | 'paid' | 'overdue';
   createdAt: string;
   paidAt?: string;
@@ -45,6 +48,7 @@ export interface InputProps {
   keyboardType?: 'default' | 'numeric' | 'email-address';
   width?: 'full' | 'half';
   prefix?: string;
+  suffix?: string;
 }
 
 export interface KPICardProps {
