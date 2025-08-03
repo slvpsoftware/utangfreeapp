@@ -62,17 +62,6 @@ export default function DashboardPage() {
     router.push('/credit-cards');
   };
 
-  const handleClearAllData = async () => {
-    try {
-      await StorageUtils.clearAllData();
-      alert('All data cleared successfully!');
-      // Reload dashboard to show empty state
-      loadData();
-    } catch (error) {
-      console.error('Error clearing data:', error);
-      alert('Error clearing data. Please try again.');
-    }
-  };
 
   // Helper function to determine debt-to-income ratio color
   const getDebtToIncomeColor = (ratio: number): string => {
@@ -162,13 +151,6 @@ export default function DashboardPage() {
         <Button
           title={userProfile ? "Edit Profile" : "Set Up Profile"}
           onPress={handleProfilePress}
-          variant="secondary"
-          fullWidth
-        />
-        
-        <Button
-          title="⚠️ Clear All Data"
-          onPress={handleClearAllData}
           variant="secondary"
           fullWidth
         />

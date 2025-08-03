@@ -39,7 +39,7 @@ export default function ProfilePage() {
     const newErrors: {[key: string]: string} = {};
 
     if (!name.trim()) {
-      newErrors.name = 'Please enter your name';
+      newErrors.name = 'Please enter your username';
     }
 
     if (income) {
@@ -93,6 +93,61 @@ export default function ProfilePage() {
     router.back();
   };
 
+  const handleResetAllData = () => {
+    Alert.alert(
+      '⚠️ Reset and Wipe All Data',
+      'This action will permanently delete ALL your data including:\n\n• All debt/utang records\n• Payment history\n• User profile information\n• All app settings\n• Encryption keys\n\nThis action CANNOT be undone. Are you absolutely sure you want to continue?',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Yes, Delete Everything',
+          style: 'destructive',
+          onPress: () => {
+            // Show second confirmation
+            Alert.alert(
+              '🚨 Final Confirmation',
+              'This is your FINAL warning. All your financial data will be permanently erased.\n\nType confirmation to proceed or cancel to keep your data safe.',
+              [
+                {
+                  text: 'Cancel - Keep My Data',
+                  style: 'cancel',
+                },
+                {
+                  text: 'DELETE EVERYTHING',
+                  style: 'destructive',
+                  onPress: async () => {
+                    try {
+                      await StorageUtils.clearAllData();
+                      Alert.alert(
+                        '✅ Data Wiped Successfully',
+                        'All your data has been permanently deleted. The app will now restart with a clean state.',
+                        [
+                          {
+                            text: 'OK',
+                            onPress: () => {
+                              // Navigate back to the initial screen
+                              router.replace('/');
+                            },
+                          },
+                        ]
+                      );
+                    } catch (error) {
+                      console.error('Error clearing data:', error);
+                      Alert.alert('Error', 'Failed to clear all data. Please try again.');
+                    }
+                  },
+                },
+              ]
+            );
+          },
+        },
+      ]
+    );
+  };
+
   if (loading) {
     return (
       <View style={[styles.container, styles.centered]}>
@@ -109,8 +164,8 @@ export default function ProfilePage() {
         <Text style={styles.sectionTitle}>Personal Information</Text>
         
         <Input
-          label="Your Name"
-          placeholder="Enter your name"
+          label="Your Username"
+          placeholder="Enter your username"
           value={name}
           onChangeText={setName}
           helperText="This will be displayed throughout the app"
@@ -155,6 +210,23 @@ export default function ProfilePage() {
               Last updated: {new Date(profile.updatedAt).toLocaleDateString()}
             </Text>
           )}
+        </View>
+      )}
+
+      {/* Dangerous Actions Section - Only show if user has set up their username */}
+      {profile && profile.name && (
+        <View style={styles.dangerSection}>
+          <Text style={styles.dangerSectionTitle}>⚠️ Danger Zone</Text>
+          <Text style={styles.dangerWarning}>
+            This action will permanently delete all your data. This cannot be undone.
+          </Text>
+          
+          <Button
+            title="Reset and Wipe All Data"
+            onPress={handleResetAllData}
+            variant="secondary"
+            fullWidth
+          />
         </View>
       )}
 
@@ -225,5 +297,25 @@ const styles = StyleSheet.create({
   loadingText: {
     ...Typography.bodyMedium,
     color: Colors.textSecondary,
+  },
+  dangerSection: {
+    marginBottom: Spacing.xl,
+    padding: Spacing.md,
+    backgroundColor: Colors.danger + '10', // Very light red background
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: Colors.danger + '30',
+  },
+  dangerSectionTitle: {
+    ...Typography.headerMedium,
+    color: Colors.danger,
+    marginBottom: Spacing.sm,
+    fontWeight: '600',
+  },
+  dangerWarning: {
+    ...Typography.bodyMedium,
+    color: Colors.danger,
+    marginBottom: Spacing.md,
+    lineHeight: 20,
   },
 });

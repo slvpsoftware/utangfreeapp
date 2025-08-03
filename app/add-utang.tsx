@@ -249,7 +249,6 @@ export default function AddUtangPage() {
             width="full"
           />
 
-          <View style={styles.row}>
           <Input
             label="Due Date"
             placeholder="1-31"
@@ -258,7 +257,7 @@ export default function AddUtangPage() {
             helperText="Day of month your payment is due"
             error={errors.dueDay}
             keyboardType="numeric"
-            width="half"
+            width="full"
           />
 
           {utangType === 'loan' && (
@@ -268,7 +267,8 @@ export default function AddUtangPage() {
               onChange={setFinalPaymentDate}
               helperText="When you plan to finish paying this utang"
               error={errors.finalDate}
-              width="half"
+              width="full"
+              minimumDate={new Date()}
             />
           )}
 
@@ -282,10 +282,9 @@ export default function AddUtangPage() {
               error={errors.interestRate}
               keyboardType="numeric"
               suffix="%"
-              width="half"
+              width="full"
             />
           )}
-        </View>
 
         {utangType === 'loan' && (
           <View style={styles.orSection}>
