@@ -11,7 +11,7 @@ export const UtangCard: React.FC<UtangCardProps> = ({
   showCheckbox = false,
 }) => {
   const isOverdue = utang.status === 'pending' && DateUtils.isOverdue(utang);
-  const isDueSoon = utang.status === 'pending' && DateUtils.getDaysUntilDue(utang.dueDay) <= 7;
+  const isDueSoon = utang.status === 'pending' && DateUtils.getDaysUntilDue(utang) <= 7;
 
   const getStatusColor = () => {
     if (utang.status === 'paid') return Colors.success;
@@ -38,7 +38,7 @@ export const UtangCard: React.FC<UtangCardProps> = ({
           </Text>
           {utang.status === 'pending' && (
             <Text style={styles.dueInfo}>
-              Due: {utang.dueDay}th of every month
+              Due: {new Date(utang.dueDate).toLocaleDateString()}
             </Text>
           )}
         </View>

@@ -1,4 +1,4 @@
-import { KPIData, Utang } from '../types';
+import { KPIData, UserProfile, Utang } from '../types';
 import { DateUtils } from './dateUtils';
 
 export const CalculationUtils = {
@@ -24,6 +24,7 @@ export const CalculationUtils = {
 
     // Find the latest final payment date
     const latestDate = pendingUtangs.reduce((latest, utang) => {
+      if (!utang.finalPaymentDate) return latest;
       const utangDate = new Date(utang.finalPaymentDate);
       return utangDate > latest ? utangDate : latest;
     }, new Date());
@@ -42,12 +43,71 @@ export const CalculationUtils = {
     return amount > 0 && amount <= 50000;
   },
 
+  // Calculate debt-to-income ratio (only current month utangs)
+  calculateDebtToIncomeRatio(utangs: Utang[], userProfile: UserProfile | null): number | undefined {
+    if (!userProfile?.income || userProfile.income <= 0) {
+      return undefined;
+    }
+
+    const currentDate = new Date();
+    const currentMonth = currentDate.getMonth();
+    const currentYear = currentDate.getFullYear();
+
+    // Get the first and last day of the current month
+    const firstDayOfMonth = new Date(currentYear, currentMonth, 1);
+    const lastDayOfMonth = new Date(currentYear, currentMonth + 1, 0);
+
+    const totalMonthlyPayments = utangs
+      .filter(utang => {
+        // Parse the actual due date
+        const dueDate = new Date(utang.dueDate);
+        
+        // Reset time to start of day for proper comparison
+        dueDate.setHours(0, 0, 0, 0);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        firstDayOfMonth.setHours(0, 0, 0, 0);
+        lastDayOfMonth.setHours(23, 59, 59, 999);
+        
+        // Include utangs due from today until the end of the current month only
+        return dueDate >= today && 
+               dueDate >= firstDayOfMonth && 
+               dueDate <= lastDayOfMonth;
+      })
+      .reduce((total, utang) => {
+        if (utang.type === 'loan') {
+          // For loans, amount is the monthly amortization
+          return total + utang.amount;
+        } else if (utang.type === 'credit_card' && utang.monthlyPayment) {
+          // For credit cards, use the planned monthly payment
+          return total + utang.monthlyPayment;
+        }
+        return total;
+      }, 0);
+
+    if (totalMonthlyPayments === 0) {
+      return 0; // No debt payments due this month
+    }
+
+    const ratio = (totalMonthlyPayments / userProfile.income) * 100;
+    return Math.round(ratio * 100) / 100; // Round to 2 decimal places
+  },
+
+  // Get debt-to-income ratio recommendation
+  getDebtToIncomeRecommendation(ratio: number): string {
+    if (ratio <= 20) return 'Excellent! You have a very healthy debt-to-income ratio.';
+    if (ratio <= 35) return 'Good! Your debt level is manageable.';
+    if (ratio <= 50) return 'Concerning. Consider paying down debt or increasing income.';
+    return 'Critical! Seek financial advice to reduce debt burden.';
+  },
+
   // Get all KPIs
-  calculateKPIs(utangs: Utang[]): KPIData {
+  calculateKPIs(utangs: Utang[], userProfile?: UserProfile | null): KPIData {
     return {
       totalUtang: this.calculateTotalUtang(utangs),
       utangImprovement: this.calculateUtangImprovement(utangs),
       projectedFreeDate: this.projectFreeDate(utangs),
+      debtToIncomeRatio: this.calculateDebtToIncomeRatio(utangs, userProfile || null),
     };
   },
 
@@ -56,8 +116,7 @@ export const CalculationUtils = {
     const grouped: { [key: string]: Utang[] } = {};
     
     utangs.forEach(utang => {
-      const dueDate = new Date();
-      dueDate.setDate(utang.dueDay);
+      const dueDate = new Date(utang.dueDate);
       const monthYear = DateUtils.getMonthYear(dueDate);
       
       if (!grouped[monthYear]) {
@@ -78,7 +137,7 @@ export const CalculationUtils = {
   getDueSoonUtangs(utangs: Utang[]): Utang[] {
     return utangs.filter(utang => {
       if (utang.status !== 'pending') return false;
-      const daysUntilDue = DateUtils.getDaysUntilDue(utang.dueDay);
+      const daysUntilDue = DateUtils.getDaysUntilDue(utang);
       return daysUntilDue <= 7 && daysUntilDue > 0;
     });
   }

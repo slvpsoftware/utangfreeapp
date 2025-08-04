@@ -10,8 +10,7 @@ import { Chip } from '../src/components/Chip';
 export default function ViewUtangListPage() {
   const [utangs, setUtangs] = useState<any[]>([]);
   const [selectedUtangs, setSelectedUtangs] = useState<string[]>([]);
-  const [isSelectionMode, setIsSelectionMode] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [paymentMode, setPaymentMode] = useState<'current_month' | 'other_months' | null>('current_month');
 
   useEffect(() => {
     loadUtangs();
@@ -34,15 +33,18 @@ export default function ViewUtangListPage() {
     router.push('/add-utang');
   };
 
-  const handleSelectUtang = () => {
-    setIsSelectionMode(!isSelectionMode);
-    if (!isSelectionMode) {
-      setSelectedUtangs([]);
-    }
+  const handlePayCurrentMonth = () => {
+    setPaymentMode(paymentMode === 'current_month' ? null : 'current_month');
+    setSelectedUtangs([]);
+  };
+
+  const handlePayOtherMonths = () => {
+    setPaymentMode(paymentMode === 'other_months' ? null : 'other_months');
+    setSelectedUtangs([]);
   };
 
   const handleUtangSelect = (utangId: string) => {
-    if (!isSelectionMode) return;
+    if (!paymentMode) return;
 
     setSelectedUtangs(prev => {
       if (prev.includes(utangId)) {
@@ -53,28 +55,58 @@ export default function ViewUtangListPage() {
     });
   };
 
-  const handleMarkAsPaid = async () => {
+  const handleProceedToConfirmation = () => {
     if (selectedUtangs.length === 0) return;
 
-    setLoading(true);
-    try {
-      await StorageUtils.markUtangsAsPaid(selectedUtangs);
-      setSelectedUtangs([]);
-      setIsSelectionMode(false);
-      await loadUtangs();
-      router.push('/congratulations');
-    } catch (error) {
-      console.error('Error marking utangs as paid:', error);
-    } finally {
-      setLoading(false);
-    }
+    // Navigate to confirmation screen with selected utang IDs
+    const utangIdsParam = selectedUtangs.join(',');
+    router.push(`/confirm-payment?utangIds=${utangIdsParam}`);
   };
 
   const groupedUtangs = CalculationUtils.groupUtangsByMonth(utangs);
+  
+  // Get current month utangs (due from today until end of current month)
+  const getCurrentMonthUtangs = () => {
+    const currentDate = new Date();
+    const currentMonth = currentDate.getMonth();
+    const currentYear = currentDate.getFullYear();
+    
+    // Get the first and last day of the current month
+    const firstDayOfMonth = new Date(currentYear, currentMonth, 1);
+    const lastDayOfMonth = new Date(currentYear, currentMonth + 1, 0);
+    
+    return utangs.filter(utang => {
+      if (utang.status !== 'pending') return false;
+      
+      // Parse the actual due date
+      const dueDate = new Date(utang.dueDate);
+      
+      // Reset time to start of day for proper comparison
+      dueDate.setHours(0, 0, 0, 0);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      firstDayOfMonth.setHours(0, 0, 0, 0);
+      lastDayOfMonth.setHours(23, 59, 59, 999);
+      
+      // Include utangs due from today until the end of the current month only
+      return dueDate >= today && 
+             dueDate >= firstDayOfMonth && 
+             dueDate <= lastDayOfMonth;
+    });
+  };
+
+  const currentMonthUtangs = getCurrentMonthUtangs();
 
   const getButtonText = () => {
-    if (!isSelectionMode) return 'Select Utang to Proceed';
-    return selectedUtangs.length > 0 ? 'Mark as Paid' : 'Select Utang to Proceed';
+    if (!paymentMode) {
+      return 'Select payment option above';
+    }
+    
+    if (selectedUtangs.length === 0) {
+      return paymentMode === 'current_month' ? 'Select utangs to pay this month' : 'Select utangs to pay';
+    }
+    
+    return 'Proceed to Payment Confirmation';
   };
 
   return (
@@ -87,52 +119,88 @@ export default function ViewUtangListPage() {
         <Text style={styles.headerTitle}>Utang List</Text>
       </View>
 
-      {/* Chips */}
+      {/* Payment Mode Selection */}
       <View style={styles.chipsContainer}>
         <Chip
-          title="Add Utang"
-          active={false}
-          onPress={handleAddUtang}
+          title="Pay This Month"
+          active={paymentMode === 'current_month'}
+          onPress={handlePayCurrentMonth}
         />
         <Chip
-          title="Select Utang"
-          active={isSelectionMode}
-          onPress={handleSelectUtang}
+          title="Pay Other Months"
+          active={paymentMode === 'other_months'}
+          onPress={handlePayOtherMonths}
         />
       </View>
 
       {/* Content */}
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {Object.keys(groupedUtangs).length === 0 ? (
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyText}>No utangs yet</Text>
-            <Text style={styles.emptySubtext}>Add your first utang to get started</Text>
-          </View>
-        ) : (
-          Object.entries(groupedUtangs).map(([monthYear, monthUtangs]) => (
-            <View key={monthYear} style={styles.monthGroup}>
-              <Text style={styles.monthLabel}>{monthYear}</Text>
-              {monthUtangs.map(utang => (
+        {paymentMode === 'current_month' ? (
+          // Show only current month utangs
+          currentMonthUtangs.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyText}>No payments due from today onwards</Text>
+              <Text style={styles.emptySubtext}>All caught up for the rest of this month! 🎉</Text>
+            </View>
+          ) : (
+            <View style={styles.monthGroup}>
+              <Text style={styles.monthLabel}>Due This Month (From Today)</Text>
+              {currentMonthUtangs.map(utang => (
                 <UtangCard
                   key={utang.id}
                   utang={utang}
                   isSelected={selectedUtangs.includes(utang.id)}
                   onSelect={handleUtangSelect}
-                  showCheckbox={isSelectionMode}
+                  showCheckbox={paymentMode !== null}
                 />
               ))}
             </View>
-          ))
+          )
+        ) : paymentMode === 'other_months' ? (
+          // Show all utangs grouped by month
+          Object.keys(groupedUtangs).length === 0 ? (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyText}>No utangs yet</Text>
+              <Text style={styles.emptySubtext}>Add your first utang to get started</Text>
+            </View>
+          ) : (
+            Object.entries(groupedUtangs).map(([monthYear, monthUtangs]) => (
+              <View key={monthYear} style={styles.monthGroup}>
+                <Text style={styles.monthLabel}>{monthYear}</Text>
+                {monthUtangs.map(utang => (
+                  <UtangCard
+                    key={utang.id}
+                    utang={utang}
+                    isSelected={selectedUtangs.includes(utang.id)}
+                    onSelect={handleUtangSelect}
+                    showCheckbox={paymentMode !== null}
+                  />
+                ))}
+              </View>
+            ))
+          )
+        ) : (
+          // No payment mode selected - show instruction
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyText}>Select Payment Option</Text>
+            <Text style={styles.emptySubtext}>Choose "Pay This Month" for current dues or "Pay Other Months" to see all utangs</Text>
+          </View>
         )}
       </ScrollView>
 
-      {/* Action Button */}
+      {/* Action Buttons */}
       <View style={styles.buttonContainer}>
         <Button
           title={getButtonText()}
-          onPress={isSelectionMode ? handleMarkAsPaid : () => {}}
-          disabled={!isSelectionMode || selectedUtangs.length === 0}
-          loading={loading}
+          onPress={paymentMode && selectedUtangs.length > 0 ? handleProceedToConfirmation : () => {}}
+          disabled={!paymentMode || selectedUtangs.length === 0}
+          fullWidth
+        />
+        
+        <Button
+          title="Add New Utang"
+          onPress={handleAddUtang}
+          variant="secondary"
           fullWidth
         />
       </View>
@@ -201,5 +269,6 @@ const styles = StyleSheet.create({
     padding: Spacing.screenPadding,
     borderTopWidth: 1,
     borderTopColor: Colors.border,
+    gap: Spacing.sm,
   },
 }); 

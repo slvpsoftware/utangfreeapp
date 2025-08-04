@@ -24,9 +24,13 @@ export const Button: React.FC<ButtonProps> = ({
       activeOpacity={0.8}
     >
       {loading ? (
-        <ActivityIndicator color={Colors.buttonText} />
+        <ActivityIndicator color={variant === 'primary' ? Colors.buttonText : Colors.primary} />
       ) : (
-        <Text style={[styles.buttonText, disabled && styles.disabledText]}>
+        <Text style={[
+          styles.buttonText, 
+          variant === 'secondary' && styles.secondaryText,
+          disabled && styles.disabledText
+        ]}>
           {title}
         </Text>
       )}
@@ -56,7 +60,7 @@ const styles = StyleSheet.create({
   secondary: {
     backgroundColor: 'transparent',
     borderWidth: 1,
-    borderColor: Colors.buttonPrimary,
+    borderColor: Colors.primary,
   },
   disabled: {
     backgroundColor: Colors.buttonDisabled,
@@ -68,6 +72,9 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     ...Typography.button,
+  },
+  secondaryText: {
+    color: Colors.primary, // Use app's primary green color for secondary button text
   },
   disabledText: {
     color: Colors.textSecondary,

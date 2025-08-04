@@ -30,10 +30,7 @@ export const AddUtangScreen: React.FC<AddUtangScreenProps> = ({
       newErrors.label = 'Please enter utang label';
     }
 
-    const dueDayNum = parseInt(dueDay);
-    if (!DateUtils.isValidDueDay(dueDayNum)) {
-      newErrors.dueDay = 'Due day must be between 1-31';
-    }
+    // No due day validation needed as we use actual dates now
 
     if (!DateUtils.isValidFinalDate(finalPaymentDate)) {
       newErrors.finalDate = 'Final payment date must be in the future';
@@ -57,9 +54,10 @@ export const AddUtangScreen: React.FC<AddUtangScreenProps> = ({
       // Create new utang
       const newUtang = {
         id: Date.now().toString(),
+        type: 'loan' as const, // Default to loan for backward compatibility
         label: utangLabel.trim(),
         amount: parseFloat(amount),
-        dueDay: parseInt(dueDay),
+        dueDate: new Date().toISOString().split('T')[0], // Default to today's date
         finalPaymentDate,
         status: 'pending' as const,
         createdAt: new Date().toISOString(),
@@ -99,13 +97,11 @@ export const AddUtangScreen: React.FC<AddUtangScreenProps> = ({
 
       <View style={styles.row}>
         <Input
-          label="Due Date"
-          placeholder="1-31"
-          value={dueDay}
-          onChangeText={setDueDay}
-          helperText="Day of month your payment is due"
-          error={errors.dueDay}
-          keyboardType="numeric"
+          label="Due Date (Deprecated)"
+          placeholder="Using date-based system"
+          value="Date system now used in main app"
+          onChangeText={() => {}} // Dummy handler for deprecated field
+          helperText="This old screen uses simplified date input"
           width="half"
         />
 
@@ -137,7 +133,7 @@ export const AddUtangScreen: React.FC<AddUtangScreenProps> = ({
         title="Proceed"
         onPress={handleSubmit}
         loading={loading}
-        disabled={!utangLabel.trim() || !dueDay || !finalPaymentDate || !amount}
+        disabled={!utangLabel.trim() || !finalPaymentDate || !amount}
         fullWidth
       />
     </ScrollView>
